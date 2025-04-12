@@ -2,6 +2,7 @@ package src.lesson1;
 
 import lombok.Getter;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 
 public class TradeManager {
@@ -20,6 +21,14 @@ public class TradeManager {
                      tradesByType.add(trade);
         }
         return tradesByType;
+    }
+
+    public BigDecimal calculateTotalAmount(){
+        BigDecimal total = BigDecimal.ZERO;
+        for (Trade trade : this.trades){
+            total = total.add(trade.getAmount());
+        }
+        return total;
     }
 
 }
