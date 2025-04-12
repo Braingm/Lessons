@@ -4,29 +4,26 @@ import lombok.Getter;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.stream.Collectors;
 
+@Getter
 public class TradeManager {
-    @Getter
     ArrayList<Trade> trades = new ArrayList<>();
 
     public void addTrade(Trade trade) {
         this.trades.add(trade);
     }
 
-    public ArrayList<Trade> getTradesByType(TradeType type){
-        ArrayList<Trade> tradesByType = new ArrayList<>();
-        for (Trade trade : this.trades )
-             {
-                 if (trade.getType().equals(type))
-                     tradesByType.add(trade);
-        }
-        return tradesByType;
+    public ArrayList<Trade> getTradesByType(TradeType type) {
+        return trades.stream()
+                .filter(trade -> trade.type().equals(type))
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
-    public BigDecimal calculateTotalAmount(){
+    public BigDecimal calculateTotalAmount() {
         BigDecimal total = BigDecimal.ZERO;
-        for (Trade trade : this.trades){
-            total = total.add(trade.getAmount());
+        for (Trade trade : this.trades) {
+            total = total.add(trade.amount());
         }
         return total;
     }
