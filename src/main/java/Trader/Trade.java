@@ -1,4 +1,4 @@
-package src.lesson1;
+package Trader;
 
 import java.math.BigDecimal;
 
