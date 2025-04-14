@@ -8,6 +8,6 @@ public class Main {
         TradeFileProcessor tradeFileProcessor = new TradeFileProcessor(manager);
         String inputFile = "src/main/resources/trades.txt";
         String outputFile = "src/main/resources/summary.txt";
-        tradeFileProcessor.processTradeFiles(inputFile, outputFile);
+        tradeFileProcessor.processTradesFile(inputFile, outputFile);
     }
 }

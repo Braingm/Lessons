@@ -2,7 +2,6 @@ package Trader;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
@@ -10,49 +9,63 @@ import java.nio.file.Paths;
 
 public class TradeFileProcessor {
     private final TradeManager tradeManager;
+    private static final String SUMMARY_FORMAT = "Total trades: %d%nTotal BUY amount: %s%nTotal SELL amount: %s";
+    private static final String EMPTY_SUMMARY = "Total trades: 0%nTotal BUY amount: 0%nTotal SELL amount: 0";
 
     public TradeFileProcessor(TradeManager tradeManager) {
         this.tradeManager = tradeManager;
     }
 
-    public void processTradeFiles(String inputFile, String outputFile) {
-        //Чтение и парсинг trades.txt
+    public void processTradesFile(String inputFile, String outputFile) {
+        readTradeFile(inputFile);
+        writeSummaryFile(outputFile);
+    }
+
+    private Trade parseTrade(String line) {
+        if (line == null || line.trim().isEmpty())
+            throw new IllegalArgumentException("Line is null or empty");
+        String[] result = line.split(";");
+        if (result.length != 4)
+            throw new IllegalArgumentException("Wrong line format");
+        try {
+            long timestamp = Long.parseLong(result[0].trim());
+            BigDecimal price = new BigDecimal(result[1].trim());
+            BigDecimal amount = new BigDecimal(result[2].trim());
+            TradeType type = TradeType.valueOf(result[3].trim());
+            return new Trade(timestamp, price, amount, type);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Parse line error: " + line, e);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Wrong operation type in line: " + line, e);
+        }
+    }
+
+    private void readTradeFile(String inputFile) {
         try (BufferedReader reader = Files.newBufferedReader(Paths.get(inputFile))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Trade trade = parseTrade(line);
                 tradeManager.addTrade(trade);
             }
-        } catch (FileNotFoundException e) {
-            System.err.println("Файл не найден: " + inputFile);
         } catch (IOException e) {
-            System.err.println("Ошибка чтения файла: " + e.getMessage());
-        }
-
-        // Запись статистики в summary.txt
-
-        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(outputFile))) {
-            var trades = tradeManager.getTrades();
-            for (Trade trade : trades) {
-                writer.append(String.valueOf(trade.timestamp()));
-                writer.append(";");
-                writer.append(trade.price().toString());
-                writer.append(";");
-                writer.append(trade.amount().toString());
-                writer.append(";");
-                writer.append(trade.type().toString());
-                writer.newLine();
-                writer.flush();
-            }
-        } catch (IOException e) {
-            System.err.println("Ошибка записи файла: " + e.getMessage());
+            System.err.println("Error reading file: " + e.getMessage());
         }
     }
 
-    private Trade parseTrade(String line) throws IllegalArgumentException {
-        String[] result = line.split(";");
-        if (result.length != 4)
-            throw new IllegalArgumentException("Неправильный формат строки");
-        return new Trade(Long.parseLong(result[0]), new BigDecimal(result[1]), new BigDecimal(result[2]), TradeType.valueOf(result[3].toUpperCase()));
+    private void writeSummaryFile(String outputFile) {
+        try (BufferedWriter writer = Files.newBufferedWriter(Paths.get(outputFile))) {
+            int totalTrades = tradeManager.getTrades().size();
+            BigDecimal buyAmount = tradeManager.calculateAmount(TradeType.BUY);
+            BigDecimal sellAmount = tradeManager.calculateAmount(TradeType.SELL);
+
+            if (totalTrades == 0) {
+                writer.write(String.format(EMPTY_SUMMARY));
+            } else {
+                writer.write(String.format(SUMMARY_FORMAT, totalTrades, buyAmount, sellAmount));
+            }
+
+        } catch (IOException e) {
+            System.err.println("Error writing file: " + e.getMessage());
+        }
     }
 }
