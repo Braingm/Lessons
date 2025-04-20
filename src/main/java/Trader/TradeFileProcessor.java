@@ -21,8 +21,10 @@ public class TradeFileProcessor {
     }
 
     public void processTradesFile(String inputFile, String outputFile) {
+        logger.info("Starting file processing: {}",inputFile);
         readTradeFile(inputFile);
         writeSummaryFile(outputFile);
+        logger.info("File processing complete. Summary written to: {}",outputFile);
     }
 
     private Trade parseTrade(String line) {
@@ -43,8 +45,10 @@ public class TradeFileProcessor {
             logger.debug("Parsed trade: timestamp={}, price={}, amount={}, type={}", timestamp, price, amount, type);
             return new Trade(timestamp, price, amount, type);
         } catch (NumberFormatException e) {
+            logger.error("Parse line error");
             throw new IllegalArgumentException("Parse line error: " + line, e);
         } catch (IllegalArgumentException e) {
+            logger.error("Wrong operation type");
             throw new IllegalArgumentException("Wrong operation type in line: " + line, e);
         }
     }
@@ -57,6 +61,7 @@ public class TradeFileProcessor {
                 tradeManager.addTrade(trade);
             }
         } catch (IOException e) {
+            logger.error("Error reading file");
             System.err.println("Error reading file: " + e.getMessage());
         }
     }
@@ -68,12 +73,14 @@ public class TradeFileProcessor {
             BigDecimal sellAmount = tradeManager.calculateAmount(TradeType.SELL);
 
             if (totalTrades == 0) {
+                logger.info("total trades = 0");
                 writer.write(String.format(EMPTY_SUMMARY));
             } else {
                 writer.write(String.format(SUMMARY_FORMAT, totalTrades, buyAmount, sellAmount));
             }
 
         } catch (IOException e) {
+            logger.error("Error writing file");
             System.err.println("Error writing file: " + e.getMessage());
         }
     }
