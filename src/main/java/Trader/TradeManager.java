@@ -3,10 +3,7 @@ package Trader;
 import lombok.Getter;
 
 import java.math.BigDecimal;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.sql.*;
 import java.util.ArrayList;
 import java.util.stream.Collectors;
 
@@ -28,10 +25,10 @@ public class TradeManager {
         this.trades.add(trade);
         try {
             String sql = "INSERT INTO TRADES (timestamp, price, amount, type) VALUES (?, ?, ?, ?)";
-            try (PreparedStatement stmt = connection.prepareStatement(sql)){
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
                 stmt.setLong(1, trade.timestamp());
                 stmt.setBigDecimal(2, trade.price());
-                stmt.setBigDecimal(3,trade.amount());
+                stmt.setBigDecimal(3, trade.amount());
                 stmt.setString(4, trade.type().name());
                 stmt.executeUpdate();
             }
@@ -41,22 +38,63 @@ public class TradeManager {
     }
 
     public ArrayList<Trade> getTradesByType(TradeType type) {
-        return trades.stream()
-                .filter(trade -> trade.type().equals(type))
-                .collect(Collectors.toCollection(ArrayList::new));
+        ArrayList<Trade> result = new ArrayList<>();
+        try {
+            String sql = "SELECT timestamp, price, amount, type FROM TRADES WHERE type = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
+                stmt.setString(1, type.name());
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        result.add(new Trade(
+                                rs.getLong("timestamp"),
+                                rs.getBigDecimal("price"),
+                                rs.getBigDecimal("amount"),
+                                TradeType.valueOf(rs.getString("type"))
+                        ));
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to get trades", e);
+        }
+        return result;
     }
 
     public BigDecimal calculateAmount() {
-        return trades.stream()
-                .map(Trade::amount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        try {
+            String sql = "SELECT SUM(amount) AS total FROM TRADES";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)){
+                try (ResultSet rs = stmt.executeQuery()){
+                    if (rs.next()){
+                        BigDecimal total = rs.getBigDecimal("total");
+                        return total != null ? total : BigDecimal.ZERO;
+                    }
+                }
+
+            }
+        } catch (SQLException e){
+            throw new RuntimeException("Failed to calculate total amount", e);
+        }
+        return BigDecimal.ZERO;
     }
 
     public BigDecimal calculateAmount(TradeType type) {
-        return trades.stream()
-                .filter(trade -> trade.type().equals(type))
-                .map(Trade::amount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        try {
+            String sql = "SELECT SUM(amount) AS total FROM TRADES WHERE type = ?";
+            try (PreparedStatement stmt = connection.prepareStatement(sql)){
+                stmt.setString(1, type.name());
+                try (ResultSet rs = stmt.executeQuery()){
+                    if (rs.next()){
+                        BigDecimal total = rs.getBigDecimal("total");
+                        return total != null ? total : BigDecimal.ZERO;
+                    }
+                }
+
+            }
+        } catch (SQLException e){
+            throw new RuntimeException("Failed to calculate total amount", e);
+        }
+        return BigDecimal.ZERO;
     }
 
     public void close() {
@@ -64,7 +102,7 @@ public class TradeManager {
             if (connection != null && !connection.isClosed()) {
                 connection.close();
             }
-        } catch (SQLException e){
+        } catch (SQLException e) {
             throw new RuntimeException("Failed to close database connection", e);
         }
     }
@@ -79,7 +117,7 @@ public class TradeManager {
                  type VARCHAR(4) NOT NULL
                 )
                 """;
-        try (PreparedStatement stmt = connection.prepareStatement(sql)){
+        try (PreparedStatement stmt = connection.prepareStatement(sql)) {
             stmt.execute();
         }
     }
