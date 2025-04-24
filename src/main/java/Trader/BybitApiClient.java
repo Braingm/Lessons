@@ -1,5 +1,6 @@
 package Trader;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -74,19 +75,42 @@ public class BybitApiClient {
 
     //Classes for JSON parsing
     @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
     static class BybitPriceResponse {
         private Result result;
 
         @Data
+        @JsonIgnoreProperties(ignoreUnknown = true)
         static class Result {
+            private String category;
             private Ticker[] list;
         }
 
         @Data
+        @JsonIgnoreProperties(ignoreUnknown = true)
         static class Ticker {
             private String symbol;
             private String lastPrice;
         }
     }
+    @Data
+    static class BybitOrderResponse {
+        private Result result;
 
+        @Data
+        static class Result {
+            private String orderId;
+        }
+    }
+
+    @Data
+    @AllArgsConstructor
+    static class OrderRequest {
+        private String category;
+        private String symbol;
+        private String side;
+        private String orderType;
+        private String qty;
+
+    }
 }
