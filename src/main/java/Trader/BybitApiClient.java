@@ -85,6 +85,20 @@ public class BybitApiClient {
                 .addHeader("X-BAPI-RECV-WINDOW", RECV_WINDOW)
                 .addHeader("X-BAPI-SIGN", signature)
                 .build();
+
+        logger.info("Sending order: {} {} {}", side, qty, symbol);
+        try (Response response = client.newCall(request).execute()){
+            if (!response.isSuccessful()){
+                logger.error("Failed to place order: HTTP {} - {}", response.code(), response.message());
+                throw new IOException("Unexpected code " + response.code());
+            }
+
+            String json = response.body().string();
+            BybitOrderResponse orderResponse = mapper.readValue(json, BybitOrderResponse.class);
+            String orderId = orderResponse.getResult().getOrderId();
+            logger.info("Order placed successfully: orderId = {}", orderId);
+            return orderId;
+        }
     }
 
     private String hmacSha256(String data, String key) throws  RuntimeException{
